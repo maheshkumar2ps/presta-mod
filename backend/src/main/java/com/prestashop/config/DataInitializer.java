@@ -2,6 +2,7 @@ package com.prestashop.config;
 
 import com.prestashop.entity.*;
 import com.prestashop.repository.*;
+import com.prestashop.service.LegacyImageMigrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -22,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LegacyImageMigrationService legacyImageMigrationService;
 
     @Override
     @Transactional
@@ -30,6 +32,7 @@ public class DataInitializer implements CommandLineRunner {
         initAdminUser();
         initCategories();
         initProducts();
+        legacyImageMigrationService.runMigrationIfEnabled();
     }
 
     private void initProfiles() {

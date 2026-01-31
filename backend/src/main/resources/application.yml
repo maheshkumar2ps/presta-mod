@@ -43,6 +43,15 @@ upload:
   images:
     path: ${UPLOAD_PATH:./uploads}/images
 
+# Legacy migration (prestashop-legacy -> prestashop-mod)
+legacy:
+  migration:
+    enabled: ${LEGACY_MIGRATION_ENABLED:true}
+    # Path to prestashop-legacy fixtures folder (e.g. ../prestashop-legacy/install-dev/fixtures/fashion)
+    # or img folder (e.g. ../prestashop-legacy/img)
+    fixtures-path: ${LEGACY_FIXTURES_PATH:}
+    img-path: ${LEGACY_IMG_PATH:}
+
 # Logging
 logging:
   level:

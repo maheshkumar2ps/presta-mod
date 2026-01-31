@@ -117,12 +117,62 @@ npm run dev
 | GET/POST/PUT/DELETE | `/api/v1/admin/products` | Product CRUD |
 | GET/POST/PUT/DELETE | `/api/v1/admin/categories` | Category CRUD |
 | POST | `/api/v1/admin/products/{id}/images` | Upload image |
+| POST | `/api/v1/admin/migration/legacy-images` | Migrate images from prestashop-legacy |
 
 ## Default Credentials
 
 ```
 Email: admin@prestashop.com
 Password: admin123
+```
+
+## Legacy Image Migration
+
+To migrate product images from **prestashop-legacy** (PHP) to **prestashop-mod**:
+
+### Using Docker
+When running with Docker, the prestashop-legacy fixtures are automatically mounted. On first startup, images are migrated from `prestashop-legacy/install-dev/fixtures/fashion` if the path exists.
+
+Ensure the folder structure:
+```
+prestashop/                    # or your repo root
+├── prestashop-mod/
+├── prestashop-legacy/
+│   └── install-dev/
+│       └── fixtures/
+│           └── fashion/
+│               ├── data/
+│               │   └── image.xml
+│               └── img/
+│                   └── p/     # product images (*.jpg)
+```
+
+### Manual Setup
+Set the legacy path in your environment or `application.yml`:
+
+```bash
+# Backend .env or environment
+LEGACY_FIXTURES_PATH=../prestashop-legacy/install-dev/fixtures/fashion
+LEGACY_MIGRATION_ENABLED=true
+```
+
+### Trigger Migration Manually (Admin API)
+If migration didn't run at startup, trigger it via the admin API:
+
+```bash
+# Login first to get token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@prestashop.com","password":"admin123"}' \
+  | jq -r '.data.token')
+
+# Run migration
+curl -X POST "http://localhost:8080/api/v1/admin/migration/legacy-images" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Or with custom path
+curl -X POST "http://localhost:8080/api/v1/admin/migration/legacy-images?path=/path/to/fashion/fixtures" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Configuration
