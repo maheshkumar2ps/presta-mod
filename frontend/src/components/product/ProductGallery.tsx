@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ProductImage } from '@/types';
+import { getImageUrl } from '@/lib/utils';
 
 interface ProductGalleryProps {
   images: ProductImage[];
@@ -40,7 +41,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
       {/* Main Image */}
       <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
         <Image
-          src={selectedImage.url}
+          src={getImageUrl(selectedImage.url)!}
           alt={selectedImage.legend || productName}
           fill
           className="object-cover"
@@ -63,7 +64,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               }`}
             >
               <Image
-                src={image.url}
+                src={getImageUrl(image.url)!}
                 alt={image.legend || `${productName} ${index + 1}`}
                 fill
                 className="object-cover"

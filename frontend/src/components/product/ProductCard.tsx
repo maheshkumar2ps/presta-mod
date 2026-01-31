@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ProductListing } from '@/types';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getImageUrl } from '@/lib/utils';
 
 interface ProductCardProps {
   product: ProductListing;
@@ -17,7 +17,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="relative aspect-square bg-gray-100">
           {product.coverImage ? (
             <Image
-              src={product.coverImage}
+              src={getImageUrl(product.coverImage)!}
               alt={product.name}
               fill
               className="object-cover transition-transform group-hover:scale-105"
