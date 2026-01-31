@@ -37,11 +37,19 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
 
-# File Upload
+# File Upload (legacy local storage - kept for backward compatibility)
 upload:
   path: ${UPLOAD_PATH:./uploads}
   images:
     path: ${UPLOAD_PATH:./uploads}/images
+
+# AWS Configuration
+aws:
+  access-key-id: ${AWS_ACCESS_KEY_ID}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket-name: ${S3_BUCKET_NAME}
 
 # Legacy migration (prestashop-legacy -> prestashop-mod)
 legacy:

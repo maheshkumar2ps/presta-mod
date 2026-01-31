@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { adminProductsApi, adminCategoriesApi } from '@/lib/api';
-import { Product, Category, ProductCreateDto } from '@/types';
+import { Product, Category, ProductCreateDto, ProductImage } from '@/types';
 
 export default function AdminProductFormPage() {
   const router = useRouter();
@@ -14,6 +14,9 @@ export default function AdminProductFormPage() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<ProductCreateDto>({
     name: '',
     description: '',
@@ -68,12 +71,64 @@ export default function AdminProductFormPage() {
         defaultCategoryId: product.defaultCategory?.id,
         categoryIds: product.categories?.map((c) => c.id) || [],
       });
+      // Set existing images
+      if (product.images) {
+        setImages(product.images);
+      }
     } catch (error) {
       alert('Failed to load product');
       router.push('/admin/products');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !productId) return;
+
+    setUploadingImages(true);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          alert(`File "${file.name}" is not an image`);
+          continue;
+        }
+        // Upload image
+        const response = await adminProductsApi.uploadImage(productId, file);
+        setImages((prev) => [...prev, response.data]);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Failed to upload image');
+    } finally {
+      setUploadingImages(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!confirm('Are you sure you want to delete this image?')) return;
+
+    try {
+      await adminProductsApi.deleteImage(imageId);
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete image');
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleImageUpload(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -384,6 +439,93 @@ export default function AdminProductFormPage() {
             </div>
           </div>
         </div>
+
+        {/* Images */}
+        {!isNew && (
+          <div className="card p-6">
+            <h3 className="mb-4 text-lg font-semibold">Product Images</h3>
+
+            {/* Upload Area */}
+            <div
+              className="mb-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload(e.target.files)}
+                className="hidden"
+              />
+              {uploadingImages ? (
+                <div className="text-gray-500">
+                  <svg className="animate-spin h-8 w-8 mx-auto mb-2" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Uploading...
+                </div>
+              ) : (
+                <>
+                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Drag and drop images here, or click to select files
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    PNG, JPG, GIF up to 10MB
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Image Gallery */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {images.map((image) => (
+                  <div key={image.id} className="relative group">
+                    <img
+                      src={image.url}
+                      alt={image.legend || 'Product image'}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                    {image.cover && (
+                      <span className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                        Cover
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(image.id)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete image"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {images.length === 0 && !uploadingImages && (
+              <p className="text-sm text-gray-500 text-center">No images uploaded yet</p>
+            )}
+          </div>
+        )}
+
+        {isNew && (
+          <div className="card p-6 bg-yellow-50 border-yellow-200">
+            <p className="text-sm text-yellow-700">
+              Save the product first to enable image uploads.
+            </p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-4">

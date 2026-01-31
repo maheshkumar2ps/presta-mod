@@ -44,7 +44,17 @@ public class ProductImage {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "s3_key")
+    private String s3Key;
+
+    @Column(name = "s3_url", length = 512)
+    private String s3Url;
+
     public String getUrl() {
+        // Return S3 URL if available, otherwise fall back to local path
+        if (s3Url != null && !s3Url.isEmpty()) {
+            return s3Url;
+        }
         return "/images/products/" + product.getId() + "/" + filename;
     }
 }
