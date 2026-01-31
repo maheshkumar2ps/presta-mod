@@ -240,9 +240,9 @@ public class ProductService {
         product.setMetaTitle(dto.getMetaTitle());
         product.setMetaDescription(dto.getMetaDescription());
 
-        if (dto.getVisibility() != null) {
-            product.setVisibility(Product.Visibility.valueOf(dto.getVisibility()));
-        }
+        product.setVisibility(dto.getVisibility() != null
+                ? Product.Visibility.valueOf(dto.getVisibility())
+                : Product.Visibility.BOTH);
         if (dto.getCondition() != null) {
             product.setCondition(Product.ProductCondition.valueOf(dto.getCondition()));
         }

@@ -17,13 +17,14 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findByLinkRewrite(String linkRewrite);
 
-    @Query("SELECT p FROM Product p WHERE p.active = true AND p.visibility IN ('BOTH', 'CATALOG')")
+    // Show active products visible on storefront (BOTH, CATALOG, SEARCH - excludes NONE)
+    @Query("SELECT p FROM Product p WHERE p.active = true AND p.visibility IN ('BOTH', 'CATALOG', 'SEARCH')")
     Page<Product> findAllActive(Pageable pageable);
 
-    @Query("SELECT p FROM Product p JOIN p.categories c WHERE c.id = :categoryId AND p.active = true AND p.visibility IN ('BOTH', 'CATALOG')")
+    @Query("SELECT p FROM Product p JOIN p.categories c WHERE c.id = :categoryId AND p.active = true AND p.visibility IN ('BOTH', 'CATALOG', 'SEARCH')")
     Page<Product> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.active = true AND p.visibility IN ('BOTH', 'SEARCH') " +
+    @Query("SELECT p FROM Product p WHERE p.active = true AND p.visibility IN ('BOTH', 'CATALOG', 'SEARCH') " +
            "AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(p.reference) LIKE LOWER(CONCAT('%', :search, '%')))")

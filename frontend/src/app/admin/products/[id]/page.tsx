@@ -311,11 +311,14 @@ export default function AdminProductFormPage() {
                 onChange={handleChange}
                 className="input"
               >
-                <option value="BOTH">Everywhere</option>
-                <option value="CATALOG">Catalog only</option>
-                <option value="SEARCH">Search only</option>
-                <option value="NONE">Nowhere</option>
+                <option value="BOTH">Everywhere (storefront + search)</option>
+                <option value="CATALOG">Catalog only (storefront, no search)</option>
+                <option value="SEARCH">Search only (no storefront)</option>
+                <option value="NONE">Nowhere (hidden from customers)</option>
               </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Use &quot;Everywhere&quot; or &quot;Catalog only&quot; for products to appear on the landing page.
+              </p>
             </div>
             <div>
               <label className="label mb-1 block">Condition</label>
