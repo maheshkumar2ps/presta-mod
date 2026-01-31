@@ -11,6 +11,11 @@ RUN npm install
 # Copy source
 COPY . .
 
+# Optional: pass NEXT_PUBLIC_S3_IMAGE_HOSTNAME when using S3 for product images
+# e.g. docker build --build-arg NEXT_PUBLIC_S3_IMAGE_HOSTNAME=my-bucket.s3.us-east-1.amazonaws.com
+ARG NEXT_PUBLIC_S3_IMAGE_HOSTNAME
+ENV NEXT_PUBLIC_S3_IMAGE_HOSTNAME=$NEXT_PUBLIC_S3_IMAGE_HOSTNAME
+
 # Build application
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
