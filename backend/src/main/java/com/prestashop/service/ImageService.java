@@ -6,8 +6,9 @@ import com.prestashop.entity.ProductImage;
 import com.prestashop.exception.ResourceNotFoundException;
 import com.prestashop.repository.ProductImageRepository;
 import com.prestashop.repository.ProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +24,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class ImageService {
+    private Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     private final ProductImageRepository imageRepository;
     private final ProductRepository productRepository;
@@ -35,9 +36,25 @@ public class ImageService {
 
     @Transactional(readOnly = true)
     public List<ProductImageDto> getProductImages(Long productId) {
-        return imageRepository.findByProductIdOrderByPositionAsc(productId).stream()
-                .map(ProductImageDto::fromEntity)
+        LOGGER.debug("Fetching images for product {}", productId);
+
+        List<ProductImage> images = imageRepository.findByProductIdOrderByPositionAsc(productId);
+        LOGGER.debug("Found {} images for product {}", images.size(), productId);
+
+        List<ProductImageDto> dtos = images.stream()
+                .map(image -> {
+                    ProductImageDto dto = ProductImageDto.fromEntity(image);
+                    LOGGER.debug("Image {} - s3Key: {}, s3Url: {}, filename: {}, resolvedUrl: {}",
+                            image.getId(),
+                            image.getS3Key(),
+                            image.getS3Url(),
+                            image.getFilename(),
+                            dto.getUrl());
+                    return dto;
+                })
                 .collect(Collectors.toList());
+
+        return dtos;
     }
 
     @Transactional
@@ -64,7 +81,7 @@ public class ImageService {
         // Upload to S3
         String s3Key = s3Service.uploadFile(file, productId);
         String s3Url = s3Service.getPublicUrl(s3Key);
-        log.info("Uploaded image to S3: {} -> {}", originalFilename, s3Url);
+        LOGGER.info("Uploaded image to S3: {} -> {}", originalFilename, s3Url);
 
         // If setting as cover, clear existing covers
         if (cover) {
@@ -102,9 +119,9 @@ public class ImageService {
         if (image.getS3Key() != null && !image.getS3Key().isEmpty()) {
             try {
                 s3Service.deleteFile(image.getS3Key());
-                log.info("Deleted image from S3: {}", image.getS3Key());
+                LOGGER.info("Deleted image from S3: {}", image.getS3Key());
             } catch (Exception e) {
-                log.error("Failed to delete image from S3: {}", image.getS3Key(), e);
+                LOGGER.error("Failed to delete image from S3: {}", image.getS3Key(), e);
             }
         } else {
             // Fallback: Delete from local filesystem (for legacy images)
@@ -112,7 +129,7 @@ public class ImageService {
                 Path filePath = Paths.get(uploadPath, "products", image.getProduct().getId().toString(), image.getFilename());
                 Files.deleteIfExists(filePath);
             } catch (IOException e) {
-                log.error("Failed to delete local image file", e);
+                LOGGER.error("Failed to delete local image file", e);
             }
         }
 

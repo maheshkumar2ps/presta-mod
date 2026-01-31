@@ -1,6 +1,7 @@
 package com.prestashop.controller.admin;
 
 import com.prestashop.dto.ApiResponse;
+import com.prestashop.service.ImageMigrationService;
 import com.prestashop.service.LegacyImageMigrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class AdminMigrationController {
 
     private final LegacyImageMigrationService legacyImageMigrationService;
+    private final ImageMigrationService imageMigrationService;
 
     @PostMapping("/legacy-images")
     @Operation(summary = "Migrate legacy images", description = "Migrate product images from prestashop-legacy fixtures to prestashop-mod")
@@ -55,5 +57,24 @@ public class AdminMigrationController {
                 "resolvedPath", path != null ? path : "",
                 "configured", path != null && !path.isBlank() ? "true" : "false"
         )));
+    }
+
+    @PostMapping("/images-to-s3")
+    @Operation(summary = "Migrate local images to S3", description = "Uploads all local product images to S3 bucket and updates database with S3 URLs")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateImagesToS3() {
+        try {
+            ImageMigrationService.MigrationResult result = imageMigrationService.migrateLocalImagesToS3();
+            return ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "total", result.total(),
+                    "success", result.success(),
+                    "failed", result.failed(),
+                    "skipped", result.skipped(),
+                    "message", String.format("Migration completed: %d success, %d failed, %d skipped out of %d total",
+                            result.success(), result.failed(), result.skipped(), result.total())
+            )));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("S3 migration failed: " + e.getMessage()));
+        }
     }
 }

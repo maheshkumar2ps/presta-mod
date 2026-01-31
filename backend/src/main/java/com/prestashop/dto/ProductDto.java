@@ -1,6 +1,9 @@
 package com.prestashop.dto;
 
 import com.prestashop.entity.Product;
+import com.prestashop.entity.ProductImage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -12,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ProductDto {
+    private static Logger LOGGER = LoggerFactory.getLogger(ProductDto.class);
 
     private Long id;
     private String name;
@@ -68,7 +72,19 @@ public class ProductDto {
     }
 
     public static ProductDto forListing(Product product) {
-        var coverImage = product.getCoverImage();
+        ProductImage coverImage = product.getCoverImage();
+        String coverUrl = null;
+
+        if (coverImage != null) {
+            coverUrl = coverImage.getUrl();
+            LOGGER.debug("Product {} ({}) - forListing - Cover image: id={}, s3Key={}, s3Url={}, filename={}, resolvedUrl={}",
+                    product.getId(), product.getName(), coverImage.getId(),
+                    coverImage.getS3Key(), coverImage.getS3Url(),
+                    coverImage.getFilename(), coverUrl);
+        } else {
+            LOGGER.debug("Product {} ({}) - forListing - No cover image", product.getId(), product.getName());
+        }
+
         return ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -79,7 +95,7 @@ public class ProductDto {
                 .quantity(product.getQuantity())
                 .inStock(product.getQuantity() > 0)
                 .onSale(product.getOnSale())
-                .coverImage(coverImage != null ? coverImage.getUrl() : null)
+                .coverImage(coverUrl)
                 .defaultCategory(product.getDefaultCategory() != null
                     ? CategoryDto.simple(product.getDefaultCategory()) : null)
                 .build();

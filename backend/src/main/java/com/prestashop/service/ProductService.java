@@ -4,6 +4,8 @@ import com.prestashop.dto.*;
 import com.prestashop.entity.*;
 import com.prestashop.exception.ResourceNotFoundException;
 import com.prestashop.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
+    private Logger LOGGER = LoggerFactory.getLogger(getClass());
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -67,17 +70,33 @@ public class ProductService {
     }
 
     private ProductDto buildFullProductDto(Product product) {
+        LOGGER.debug("Building full ProductDto for product {} ({})", product.getId(), product.getName());
+
         ProductDto dto = ProductDto.fromEntity(product);
 
         // Add images
-        dto.setImages(product.getImages().stream()
-                .map(ProductImageDto::fromEntity)
+        List<ProductImage> images = product.getImages();
+        LOGGER.debug("Product {} has {} images", product.getId(), images.size());
+
+        dto.setImages(images.stream()
+                .map(img -> {
+                    ProductImageDto imgDto = ProductImageDto.fromEntity(img);
+                    LOGGER.debug("Product {} - Image {} - s3Key: {}, s3Url: {}, filename: {}, resolvedUrl: {}",
+                            product.getId(), img.getId(), img.getS3Key(), img.getS3Url(),
+                            img.getFilename(), imgDto.getUrl());
+                    return imgDto;
+                })
                 .collect(Collectors.toList()));
 
         // Set cover image
         ProductImage cover = product.getCoverImage();
         if (cover != null) {
-            dto.setCoverImage(cover.getUrl());
+            String coverUrl = cover.getUrl();
+            dto.setCoverImage(coverUrl);
+            LOGGER.debug("Product {} - Cover image: id={}, s3Key={}, s3Url={}, resolvedUrl={}",
+                    product.getId(), cover.getId(), cover.getS3Key(), cover.getS3Url(), coverUrl);
+        } else {
+            LOGGER.debug("Product {} - No cover image found", product.getId());
         }
 
         // Add variants
