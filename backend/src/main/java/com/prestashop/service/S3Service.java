@@ -9,12 +9,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 @Service
@@ -97,6 +101,29 @@ public class S3Service {
         } catch (S3Exception e) {
             LOGGER.error("S3 delete failed for key: {}, error: {}", s3Key, e.awsErrorDetails().errorMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Gets object content from S3 as an input stream.
+     * Caller is responsible for closing the stream.
+     *
+     * @param s3Key the S3 object key (e.g. products/1/uuid.jpg)
+     * @return input stream of the object content
+     * @throws IOException if the object does not exist or cannot be read
+     */
+    public InputStream getObjectContent(String s3Key) throws IOException {
+        try {
+            GetObjectRequest request = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build();
+            ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request);
+            LOGGER.debug("Fetched object from S3: {}", s3Key);
+            return response;
+        } catch (S3Exception e) {
+            LOGGER.debug("S3 getObject failed for key: {}, error: {}", s3Key, e.awsErrorDetails().errorMessage());
+            throw new IOException("Failed to read from S3: " + e.awsErrorDetails().errorMessage(), e);
         }
     }
 
