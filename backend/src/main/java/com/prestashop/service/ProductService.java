@@ -57,14 +57,14 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDto getProductBySlug(String slug) {
-        Product product = productRepository.findByLinkRewrite(slug)
+        Product product = productRepository.findByLinkRewriteWithImages(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + slug));
         return buildFullProductDto(product);
     }
 
     @Transactional(readOnly = true)
     public ProductDto getProductById(Long id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdWithImages(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         return buildFullProductDto(product);
     }
@@ -166,6 +166,9 @@ public class ProductService {
         mapUpdateDtoToEntity(updateDto, product);
 
         product = productRepository.save(product);
+        // Reload with images so response has fresh cover/image URLs after any image changes
+        product = productRepository.findByIdWithImages(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
         return buildFullProductDto(product);
     }
 

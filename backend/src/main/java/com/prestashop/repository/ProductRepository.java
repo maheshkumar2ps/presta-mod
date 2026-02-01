@@ -17,6 +17,14 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findByLinkRewrite(String linkRewrite);
 
+    /** Load product with images for detail/listing so cover image URL is always fresh after updates. */
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.id = :id")
+    Optional<Product> findByIdWithImages(@Param("id") Long id);
+
+    /** Load product with images for PDP so image URLs are always fresh after updates. */
+    @Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.images WHERE p.linkRewrite = :linkRewrite")
+    Optional<Product> findByLinkRewriteWithImages(@Param("linkRewrite") String linkRewrite);
+
     // Show active products visible on storefront (BOTH, CATALOG, SEARCH - excludes NONE)
     @Query("SELECT p FROM Product p WHERE p.active = true AND p.visibility IN ('BOTH', 'CATALOG', 'SEARCH')")
     Page<Product> findAllActive(Pageable pageable);

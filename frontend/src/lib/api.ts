@@ -70,7 +70,7 @@ export const productsApi = {
     if (params?.sort) searchParams.set('sort', params.sort);
 
     const query = searchParams.toString();
-    return fetchApi(`/products${query ? `?${query}` : ''}`);
+    return fetchApi(`/products${query ? `?${query}` : ''}`, { cache: 'no-store' as RequestCache });
   },
 
   search: (query: string, params?: {
@@ -81,11 +81,11 @@ export const productsApi = {
     if (params?.page !== undefined) searchParams.set('page', String(params.page));
     if (params?.size) searchParams.set('size', String(params.size));
 
-    return fetchApi(`/products/search?${searchParams}`);
+    return fetchApi(`/products/search?${searchParams}`, { cache: 'no-store' as RequestCache });
   },
 
   getBySlug: (slug: string): Promise<ApiResponse<Product>> => {
-    return fetchApi(`/products/${slug}`);
+    return fetchApi(`/products/${slug}`, { cache: 'no-store' as RequestCache });
   },
 
   getVariants: (slug: string): Promise<ApiResponse<ProductVariant[]>> => {
@@ -122,7 +122,7 @@ export const categoriesApi = {
     if (params?.sort) searchParams.set('sort', params.sort);
 
     const query = searchParams.toString();
-    return fetchApi(`/categories/${slug}/products${query ? `?${query}` : ''}`);
+    return fetchApi(`/categories/${slug}/products${query ? `?${query}` : ''}`, { cache: 'no-store' as RequestCache });
   },
 };
 
