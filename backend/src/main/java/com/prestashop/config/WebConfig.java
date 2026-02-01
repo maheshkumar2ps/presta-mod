@@ -1,24 +1,18 @@
 package com.prestashop.config;
 
-import com.prestashop.service.S3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.resource.PathResourceResolver;
 
 import java.io.File;
 
 @Configuration
-@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
     private static final Logger LOGGER = LoggerFactory.getLogger(WebConfig.class);
-
-    private final S3Service s3Service;
 
     @Value("${upload.images.path:./uploads/images}")
     private String uploadPath;
@@ -41,12 +35,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String resourceLocation = "file:" + uploadPath + "/";
-        LOGGER.info("Registering resource handler: /images/** (S3 for products/, file fallback for rest)");
+        LOGGER.info("Registering resource handler: /images/** -> {} (product images served from S3 via ImageController)", resourceLocation);
 
         registry.addResourceHandler("/images/**")
-                .addResourceLocations(resourceLocation)
-                .resourceChain(true)
-                .addResolver(new S3ResourceResolver(s3Service))
-                .addResolver(new PathResourceResolver());
+                .addResourceLocations(resourceLocation);
     }
 }

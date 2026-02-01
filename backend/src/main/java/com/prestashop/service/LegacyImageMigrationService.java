@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,6 +31,7 @@ public class LegacyImageMigrationService {
 
     private final ProductRepository productRepository;
     private final ProductImageRepository imageRepository;
+    private final S3Service s3Service;
 
     @Value("${legacy.migration.enabled:true}")
     private boolean migrationEnabled;
@@ -38,9 +41,6 @@ public class LegacyImageMigrationService {
 
     @Value("${legacy.migration.img-path:}")
     private String imgPath;
-
-    @Value("${upload.images.path:./uploads/images}")
-    private String uploadPath;
 
     private static final Pattern IMAGE_ELEMENT = Pattern.compile(
             "<image\\s+id=\"([^\"]+)\"\\s+id_product=\"([^\"]+)\"\\s+cover=\"([^\"]*)\"",
@@ -211,21 +211,26 @@ public class LegacyImageMigrationService {
         return null;
     }
 
+    /**
+     * Migrates a single image from legacy path directly to S3 (no local folder).
+     * When DB has no products and migration runs, images go straight to the S3 bucket.
+     */
     private void migrateSingleImage(Product product, Path sourceFile, boolean cover, int position) throws IOException {
-        String ext = "";
         String fn = sourceFile.getFileName().toString();
+        String ext = "";
         int dot = fn.lastIndexOf('.');
         if (dot > 0) ext = fn.substring(dot);
-
-        String filename = UUID.randomUUID() + ext;
-        Path productDir = Paths.get(uploadPath, "products", product.getId().toString());
-        Files.createDirectories(productDir);
-        Path targetPath = productDir.resolve(filename);
-        Files.copy(sourceFile, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        String mimeType = guessMimeType(ext);
+        long fileSize = Files.size(sourceFile);
 
         if (cover) {
             imageRepository.clearCoverByProductId(product.getId());
         }
+
+        // Upload directly to S3 (no local folder)
+        String s3Key = s3Service.uploadFromPath(sourceFile, product.getId(), mimeType);
+        String s3Url = s3Service.getPublicUrl(s3Key);
+        String filename = s3Key.substring(s3Key.lastIndexOf('/') + 1);
 
         ProductImage image = ProductImage.builder()
                 .product(product)
@@ -234,11 +239,14 @@ public class LegacyImageMigrationService {
                 .position(position)
                 .cover(cover || position == 0)
                 .legend(null)
-                .mimeType(guessMimeType(ext))
-                .fileSize(Files.size(targetPath))
+                .mimeType(mimeType)
+                .fileSize(fileSize)
+                .s3Key(s3Key)
+                .s3Url(s3Url)
                 .build();
 
         imageRepository.save(image);
+        log.debug("Migrated image to S3: product {} -> {}", product.getLinkRewrite(), s3Key);
     }
 
     private String guessMimeType(String ext) {

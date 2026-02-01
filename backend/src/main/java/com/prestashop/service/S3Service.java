@@ -19,6 +19,8 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 
 @Service
@@ -82,6 +84,32 @@ public class S3Service {
                     productId, originalFilename, e);
             throw new IOException("Failed to upload to S3: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Uploads a file from the local filesystem to S3 (e.g. during legacy migration).
+     * Used when migrating images directly to S3 instead of copying to upload folder.
+     *
+     * @param sourcePath path to the source file
+     * @param productId product id for the key prefix
+     * @param contentType MIME type (e.g. image/jpeg)
+     * @return the S3 key (use getPublicUrl(key) for the URL)
+     */
+    public String uploadFromPath(Path sourcePath, Long productId, String contentType) throws IOException {
+        String filename = sourcePath.getFileName().toString();
+        String extension = filename.contains(".") ? filename.substring(filename.lastIndexOf(".")) : ".jpg";
+        String s3Filename = UUID.randomUUID().toString() + extension;
+        String s3Key = "products/" + productId + "/" + s3Filename;
+
+        byte[] bytes = Files.readAllBytes(sourcePath);
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(s3Key)
+                .contentType(contentType != null ? contentType : "image/jpeg")
+                .build();
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
+        LOGGER.info("Uploaded from path to S3: {} -> {} ({} bytes)", sourcePath.getFileName(), s3Key, bytes.length);
+        return s3Key;
     }
 
     /**

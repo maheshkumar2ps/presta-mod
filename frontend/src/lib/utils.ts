@@ -12,8 +12,8 @@ export function getImageUrl(relativeUrl: string | undefined | null): string | un
   if (!relativeUrl) return undefined;
   // Absolute URLs (S3, etc.) pass through unchanged
   if (!relativeUrl.startsWith('/')) return relativeUrl;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
-  const base = apiBase.replace(/\/api\/v1\/?$/, '');
+  const apiBase = process.env.S3_BUCKET_NAME + ".s3." + process.env.AWS_REGION + ".amazonaws.com/";
+  const base = apiBase.replace(/\/images\/?$/, '');
   return `${base}${relativeUrl}`;
 }
 
